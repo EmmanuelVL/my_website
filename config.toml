@@ -1,7 +1,7 @@
 # Site settings
 baseURL = "https://emmanuel-assignment.netlify.app/"
 languageCode = "en-us"
-title = "Forty"
+title = "Emmanuel's portfolio website"
 theme = "forty"
 
 # Enter your tracking code to enable Google Analytics
@@ -20,7 +20,7 @@ disqusShortname = ""
 
   # Provide your metadata here.
   name = "Emmanuel"
-  description = "Your description"
+  description = "MFA student at LBS"
 
   # Link custom assets relative to /static
   custom_css = []
@@ -37,8 +37,8 @@ disqusShortname = ""
 
   # Navigation Section
   [params.navigation]
-    title = "Forty"
-    subtitle = "By HTML5 Up"
+    title = "Emmanuel"
+    # subtitle = 
     menu = "Menu"
     # Optional logo as brand stored in img/
     # logo = "logo.png"
@@ -51,13 +51,13 @@ disqusShortname = ""
       name = "Blogs"
       url = "blogs"
 
-    [[params.navigation.links]]
-      name = "Generic Blog"
-      url = "blogs/ipsum"
+    #[[params.navigation.links]]
+    #  name = "Generic Blog"
+    #  url = "blogs/ipsum"
 
-    [[params.navigation.links]]
-      name = "Elements"
-      url = "elements.html"
+    #[[params.navigation.links]]
+    #  name = "Elements"
+    #  url = "elements.html"
 
     # Add custom links here by uncommenting code below. To remove links just delete
     # the [[params.navigation.links]] map associated with that link. Copy and paste
@@ -68,22 +68,22 @@ disqusShortname = ""
 
     # Button Style 1
     [[params.navigation.button1]]
-      name = "Get Started"
+      name = "Get musical"
       url = "blogs"
 
     # Button Style 2
-    [[params.navigation.button2]]
-      name = "Log In"
-      url = "#"
+    #[[params.navigation.button2]]
+    #  name = "Log In"
+    #  url = "#"
 
 
   # Banner section
   [params.banner]
     # To change the background image on the homepage banner, replace 'banner.jpg' in
     # the 'static/img' folder.
-    title = "Hi, my name is Emmanuel"
-    subtitle = "This is my portfolio website"
-    buttonText = "Get Started"
+    title = "The wonders of Classical Music"
+    subtitle = "A deep dive in the best composers"
+    buttonText = "Get musical"
 
 
   # Tiles Section
@@ -92,16 +92,16 @@ disqusShortname = ""
     # Display your showcases here.
     
     [[params.tiles.showcase]]
-      title = "Aliquam"
-      subtitle = "Ipsum Dolor Sit Amet"
-      image = "pic01.jpg"
-      url = "blogs/aliquam"
+      title = "Beethoven"
+      subtitle = "The deaf genious"
+      image = "Beethoven"
+      url = "blogs/Beethoven"
 
     [[params.tiles.showcase]]
-      title = "Tempus"
+      title = "AirBnB"
       subtitle = "Feugiat Amet Tempus"
       image = "pic02.jpg"
-      url = "blogs/tempus"
+      url = "blogs/blog5"
 
     [[params.tiles.showcase]]
       title = "Magna"
