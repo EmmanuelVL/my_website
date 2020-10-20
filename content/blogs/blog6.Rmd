@@ -50,9 +50,9 @@ library(ggrepel)
 
 # Where Do People Drink The Most Beer, Wine And Spirits?
 
-**Back in 2014, [fivethiryeight.com](https://fivethirtyeight.com/features/dear-mona-followup-where-do-people-drink-the-most-beer-wine-and-spirits/) published an article on alcohol consumption in different countries. The data `drinks` is available as part of the `fivethirtyeight` package. Make sure you have installed the `fivethirtyeight` package before proceeding.**
 
-```{r, load_alcohol_data}
+
+```{r, load_alcohol_data, results = "hide"}
 library(fivethirtyeight)
 data(drinks)
 
@@ -63,7 +63,7 @@ data(drinks)
 
 
 
-```{r glimpse_skim_data}
+```{r glimpse_skim_data, results = "hide"}
 
 glimpse(drinks)
 skim(drinks)
@@ -137,8 +137,6 @@ ggplot(top25_spirit, aes(x=spirit_servings, y=reorder(country,spirit_servings)))
 Finally, we do the same for spirits as we did in our two previuos analyses.
 
 *What can you infer from these plots? Don't just explain what's in the graph, but speculate or tell a short story (1-2 paragraphs max).*
-
-> TYPE YOUR ANSWER AFTER (AND OUTSIDE!) THIS BLOCKQUOTE.
 
 Overall, there seems to be a significant difference between the top 25 beer, wine and spirit consuming countries. When considering the consumption of spirits and beer there seems to be little correlation to income per capita. One might assume that the consumption of these alcoholic beverages is positively enforced by the production of the beverage in each country, but this is not certain. Furthermore, we find that wine consumption is higher in wine producing countries (e.g. Portugal, France, etc.), but also that there seems to be a positive correlation between income per capita and the consumption of wine. It is possible to assume that wine, being more expensive than beer and spirits on a per liter (alcoholic) basis will be consumed more by countries that are economically better off than others. 
 At last, when looking at beer and spirits as well as wine, there also seems to be a clear cultural or even geographic factor. There must be cultural reasons for why more Eastern European countries are more prevalent in the top 25 spirit consumption list, whereas that is not the case for beer. Likewise, the top consuming groups we see for wine and beer are different as well. This could mean that the consumption of any alcoholic beverage is not only affected by the economic well being of a country, nor the production of a respective beverage in each country, but also the cultural heritage and the importance particular types of beverages carry within different societies and countries. 
