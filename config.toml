@@ -99,8 +99,8 @@ disqusShortname = ""
 
     [[params.tiles.showcase]]
       title = "AirBnB"
-      subtitle = "Feugiat Amet Tempus"
-      image = "pic02.jpg"
+      subtitle = "An overview of prices in Brussels"
+      image = "brussels.jpg"
       url = "blogs/blog5"
 
     [[params.tiles.showcase]]
@@ -172,50 +172,50 @@ disqusShortname = ""
     # by copying the corresponding map with frontmatter code.
     [[params.contact.email]]
     title = "Email"
-    email = "example@domain.com"
+    email = "emmanuelv.mfa2021@london.edu"
 
     [[params.contact.phone]]
     title = "Phone"
-    phone = "(000) 000-0000 x1234"
+    phone = "+32 471 73 68 72"
 
     [[params.contact.address]]
-    title = "Address"
-    street = "Street"
-    city = "City, ST 00000"
-    country = "Country"
+    title = "Regent's Park"
+    street = "NW1 4SA"
+    city = "London"
+    country = "United Kingdom"
 
   # Footer section
   [params.footer]
     enable = true
-    copyright = "Company Name"
+    copyright = "Emmanuel Van Lembergen"
 
     # Uses font awesome icons
     [[params.footer.social]]
-      icon = "fa-twitter"
-      url= "https://www.twitter.com"
-      label = "Twitter"
+      #icon = "fa-twitter"
+      #url= "https://www.twitter.com"
+      #label = "Twitter"
 
     [[params.footer.social]]
       icon = "fa-facebook"
-      url= "https://www.facebook.com"
+      url= "https://www.facebook.com/emmanuel.vanlembergen"
       label = "Facebook"
 
     [[params.footer.social]]
       icon = "fa-instagram"
-      url= "https://www.instagram.com"
+      url= "https://www.instagram.com/emmanuelvanlembergen/?hl=nl"
       label = "Instagram"
     
     [[params.footer.social]]
-      icon = "fa-github"
-      url= "https://www.github.com"
-      label = "GitHub"
+      #icon = "fa-github"
+      #url= "https://www.github.com"
+      #label = "GitHub"
 
     [[params.footer.social]]
       icon = "fa-linkedin"
-      url= "https://www.linkedin.com"
+      url= "https://www.linkedin.com/in/emmanuel-van-lembergen/"
       label = "LinkedIn"
 
     [[params.footer.quicklinks]]
-      text = "Design: "
-      url= "https://www.html5up.net"
-      alt = "HTML5 UP"
+      #text = "Design: "
+      #url= "https://www.html5up.net"
+      #alt = "HTML5 UP"
