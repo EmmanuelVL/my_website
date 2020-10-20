@@ -1,0 +1,230 @@
+---
+categories:
+- ""
+- ""
+date: "2017-10-31T22:42:51-05:00"
+description: Analysis of GDP, mortality rate, fertility rate and HIV prevelance accross different countries
+draft: false
+image: gapminder.jpg
+keywords: ""
+slug: blog8
+title: Gapminder data.
+---
+
+
+
+<p>In this part, we will join a few dataframes with more data than the ‘gapminder’ package. Specifically, you will look at data on</p>
+<ul>
+<li>Life expectancy at birth (life_expectancy_years.csv)</li>
+<li>GDP per capita in constant 2010 US$ (<a href="https://data.worldbank.org/indicator/NY.GDP.PCAP.KD" class="uri">https://data.worldbank.org/indicator/NY.GDP.PCAP.KD</a>)</li>
+<li>Female fertility: The number of babies per woman (<a href="https://data.worldbank.org/indicator/SP.DYN.TFRT.IN" class="uri">https://data.worldbank.org/indicator/SP.DYN.TFRT.IN</a>)</li>
+<li>Primary school enrollment as % of children attending primary school (<a href="https://data.worldbank.org/indicator/SE.PRM.NENR" class="uri">https://data.worldbank.org/indicator/SE.PRM.NENR</a>)</li>
+<li>Mortality rate, for under 5, per 1000 live births (<a href="https://data.worldbank.org/indicator/SH.DYN.MORT" class="uri">https://data.worldbank.org/indicator/SH.DYN.MORT</a>)</li>
+<li>HIV prevalence (adults_with_hiv_percent_age_15_49.csv): The estimated number of people living with HIV per 100 population of age group 15-49.</li>
+</ul>
+<p>We must use the <code>wbstats</code> package to download data from the World Bank. The relevant World Bank indicators are <code>SP.DYN.TFRT.IN</code>, <code>SE.PRM.NENR</code>, <code>NY.GDP.PCAP.KD</code>, and <code>SH.DYN.MORT</code></p>
+<pre class="r"><code># load gapminder HIV data
+hiv &lt;- read_csv(here::here(&quot;data&quot;,&quot;adults_with_hiv_percent_age_15_49.csv&quot;))
+life_expectancy &lt;- read_csv(here::here(&quot;data&quot;,&quot;life_expectancy_years.csv&quot;))
+
+# get World bank data using wbstats
+indicators &lt;- c(&quot;SP.DYN.TFRT.IN&quot;,&quot;SE.PRM.NENR&quot;, &quot;SH.DYN.MORT&quot;, &quot;NY.GDP.PCAP.KD&quot;)
+
+
+library(wbstats)
+
+worldbank_data &lt;- wb_data(country=&quot;countries_only&quot;, #countries only- no aggregates like Latin America, Europe, etc.
+                          indicator = indicators, 
+                          start_date = 1960, 
+                          end_date = 2016)
+
+# get a dataframe of information regarding countries, indicators, sources, regions, indicator topics, lending types, income levels,  from the World Bank API 
+countries &lt;-  wbstats::wb_cachelist$countries</code></pre>
+<p>You have to join the 3 dataframes (life_expectancy, worldbank_data, and HIV) into one. You may need to tidy your data first and then perform <a href="http://r4ds.had.co.nz/relational-data.html">join operations</a>. Think about what type makes the most sense <strong>and explain why you chose it</strong>.</p>
+<p>First, we tidy the data, so that the dataframes can all be merged. The worldbank_data seems to be adhering the the three rules (every variable has own column, row and cell). The only thing we have to do here is rename some of the variables to make working with them easier. However, the HIV and Life_Expectancy datasets are not structured in a similar way. Instead of havin them in Matrix format of (country x year), we use the pivot_longer to create one list of variables for every country and every year. Lastly, considering we will need the regions later, we restructure the countries dataframe so that we only keep the data that is interesting for us. This will make the final dataframe we’ll work with a lot cleaner.</p>
+<pre class="r"><code>tidy_hiv &lt;- hiv %&gt;%
+  pivot_longer(cols=2:34, 
+              names_to=&quot;Year&quot;,
+              values_to=&quot;HIV&quot;) %&gt;% 
+  mutate(&quot;Year&quot;=as.numeric(Year)) 
+
+tidy_life_expectancy &lt;- life_expectancy %&gt;% 
+  pivot_longer(cols= 2:302,
+               names_to=&quot;Year&quot;,
+               values_to=&quot;Life_Expectancy&quot;)%&gt;% 
+  mutate(&quot;Year&quot;=as.numeric(Year)) 
+
+tidy_worldbank_data &lt;- worldbank_data %&gt;% 
+  rename(&quot;Year&quot; = &quot;date&quot;,
+         &quot;GDP_Capita&quot; = &quot;NY.GDP.PCAP.KD&quot;,
+         &quot;Education&quot; = &quot;SE.PRM.NENR&quot;,
+         &quot;Mortality_Rate&quot; = &quot;SH.DYN.MORT&quot;,
+         &quot;Fertility_Rate&quot; = &quot;SP.DYN.TFRT.IN&quot;)
+
+tidy_countries &lt;- countries %&gt;% 
+  summarize (country=country,
+             region=region)</code></pre>
+<p>Now that we have tidied the data, we add these three tidy dataframes (hiv, life expectancy and countries) to the worldbank dataset, using the full_join function. The dataset ‘full_dataset’ will now contain all the necessary information to answer the questions here below.</p>
+<pre class="r"><code>half_full &lt;- full_join(tidy_worldbank_data, tidy_hiv, by= c(&quot;Year&quot;,&quot;country&quot;))
+three_datasets &lt;- full_join(half_full, tidy_life_expectancy, by= c(&quot;Year&quot;, &quot;country&quot;))
+full_dataset &lt;- full_join(three_datasets, tidy_countries, by= &quot;country&quot;)</code></pre>
+<p><strong>1. We generate a plot comparing HIV prevalence and life expectancy </strong></p>
+<pre class="r"><code>Q1 &lt;- full_dataset %&gt;% 
+  filter(!is.na(HIV)) %&gt;% 
+  filter(!is.na(Life_Expectancy)) %&gt;% 
+  filter(!is.na(region))
+
+ggplot(Q1, aes(x=HIV, y=Life_Expectancy)) +
+  geom_point(aes(color=&quot;FF6347&quot;)) + 
+  labs(x=&quot;HIV percentage&quot;, y=&quot;Life expectancy&quot;) +
+  ggtitle(&quot;HIV prevelance lowers the life expectancy&quot;) +
+  scale_x_log10() +
+  facet_wrap(~region, scales=&quot;free&quot;) +
+  theme_bw() +
+  geom_smooth(method=&#39;lm&#39;, se=FALSE, color=&quot;dark blue&quot;)</code></pre>
+<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-3-1.png" width="648" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>cor_test(Q1$HIV, Q1$Life_Expectancy)</code></pre>
+<pre><code>## 
+##  Pearson&#39;s product-moment correlation
+## 
+## data:  x and y
+## t = -35, df = 3115, p-value &lt;2e-16
+## alternative hypothesis: true correlation is not equal to 0
+## 95 percent confidence interval:
+##  -0.555 -0.505
+## sample estimates:
+##    cor 
+## -0.531</code></pre>
+<p>Running a Correlation tests clearly shows that there is a negative relationship between HIV Prelevance and life expectancy. However, after running the ggplot, we can notice that this is the case for all regions apart for the ‘Europe &amp; Central Asia’ one. The reason for this is unclear, but it could be that the countries with the higher HIV prevelance are located in areas where healthcare is better and where the impact of HIV on one’s life expectancy is thus lower.</p>
+<p><strong>2. Second, we analyze the relationship between fertility rate and GDP per capita?</strong></p>
+<pre class="r"><code>Q2 &lt;- full_dataset %&gt;% 
+  filter(!is.na(Fertility_Rate)) %&gt;% 
+  filter(!is.na(GDP_Capita)) %&gt;% 
+  filter(!is.na(region))
+
+
+ggplot(Q2, aes(x=Fertility_Rate, y=GDP_Capita)) +
+  geom_point(aes(color=&quot;FF6347&quot;)) + 
+  labs(title= &quot;Countries where many kids are born per woman tend to have a \nlower GDP per Capita&quot;,
+       x=&quot;Babies per woman&quot;, 
+       y=&quot;GDP per capita&quot;) +
+  scale_y_log10() +
+  theme_bw() +
+  facet_wrap(~region, scales=&quot;free&quot;) +
+  geom_smooth(method=&#39;lm&#39;, se=FALSE, color=&quot;dark blue&quot;)</code></pre>
+<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-4-1.png" width="648" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>cor_test(Q2$Fertility_Rate, Q2$`GDP_Capita`)</code></pre>
+<pre><code>## 
+##  Pearson&#39;s product-moment correlation
+## 
+## data:  x and y
+## t = -54, df = 8440, p-value &lt;2e-16
+## alternative hypothesis: true correlation is not equal to 0
+## 95 percent confidence interval:
+##  -0.525 -0.493
+## sample estimates:
+##    cor 
+## -0.509</code></pre>
+<p>Similarly to the last question, we find a highly correlated, negative relationship. However, this relationship between the fertility rate and the GDP per capita seems to be present not only in general, but also applies to all the regions individually. Countries where women have a large amount of kids tend to have a lower GDP per capita than the countries where women have a lower amount of kids.</p>
+<p><strong>3. We will now find out which region has the largest amount of missing data for HIV</strong></p>
+<pre class="r"><code>Q3 &lt;- full_dataset %&gt;% 
+  group_by(region) %&gt;% 
+  summarize(total_HIV=sum(is.na(HIV))) %&gt;%
+  arrange(desc(total_HIV)) %&gt;% 
+  filter(!is.na(region)) %&gt;% 
+  filter(!region==&quot;Aggregates&quot;)
+
+ggplot(Q3, aes(x=total_HIV, y=reorder(region, total_HIV), color=&quot;FF6347&quot;)) +
+  geom_col() +
+  theme_bw() +
+  labs(title= &quot;Europe &amp; Central Asia is the region with the most missing values&quot;, 
+       x= &quot;Number of missing values&quot;,
+       y=&quot; &quot;)</code></pre>
+<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-5-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p>Clearly, the region with the largest amount of missing values is ‘Europe and Central Asia’, followed by ‘Sub-Saharan Africa’.</p>
+<p><strong>4. Now we try to figure out how the mortality rate has changed by region, and the top 5 countries who have known the greatest and worst improvement</strong></p>
+<p>Looking at the dataset, it is impossible to compare all countries for the full timeline in the data. This is because not all countries’ data for mortality rate starts in 1960. Some countries start showing data later. The most extreme example is Guinea-Bissau, where data for mortality rate is only mentioned from 1985 onwards. Instead of looking at the data, we will thus answer this question, using a range of <strong>30 years</strong> (1986-2016).</p>
+<p>First we prepare a new dataset which contains the change of in mortality rate per country.</p>
+<pre class="r"><code>Q4_1 &lt;- full_dataset %&gt;% 
+  filter(!is.na(Mortality_Rate)) %&gt;%
+  select(c(country,region,Year,Mortality_Rate)) %&gt;%
+  pivot_wider(names_from = Year, values_from=Mortality_Rate) %&gt;% 
+  rename(start= &#39;1986&#39;,
+         end= &#39;2016&#39;) %&gt;% 
+  mutate(change =((end - start)/start)*-100) </code></pre>
+<p>Now, we group the average of the change between 1986 and 2016, group them by region and plot them in a descending order.</p>
+<pre class="r"><code>Q4_2 &lt;- Q4_1 %&gt;% 
+  group_by(region) %&gt;% 
+  summarize(average_change=mean(change)) %&gt;% 
+  arrange(desc(average_change)) 
+  
+ggplot(Q4_2, aes(x=average_change, y=reorder(region, average_change), color=&quot;FF6347&quot;)) +
+  geom_col() +
+  theme_bw() +
+  labs(title= &quot;South Asia has experienced the largest improvement in \nmortality rate under 5 years old&quot;, 
+       x= &quot;Percentage decrease of mortality rate &lt;5Y&quot;,
+       y=&quot; &quot;)</code></pre>
+<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-7-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p>Clearly, South Asia has improved the most in the past 30 years in terms of mortality rate for children smaller than 5 years, followed closely by Europe &amp; Central Asia.</p>
+<p>Now that we have this information, it is time to figure out, who were the best performers per region and who were the worst performers.</p>
+<pre class="r"><code>Q4_3 &lt;- Q4_1 %&gt;% 
+  select(c(country, region, change)) %&gt;% 
+  arrange(change)
+
+Top_5 &lt;- Q4_3 %&gt;%
+  group_by(region) %&gt;% 
+  top_n(n=5, wt=change) %&gt;% 
+  arrange(desc(change))
+
+Worst_5 &lt;- Q4_3 %&gt;% 
+  group_by(region) %&gt;% 
+  top_n(n=-5, wt=change) %&gt;% 
+  arrange(change)
+
+
+ggplot(Top_5, aes(x=change, y=reorder(country,change), color=&quot;FF6347&quot;)) +
+  geom_col() +
+  theme_bw() +
+  labs(title= &quot;Best performing countries per region in terms of decrease in \nmortality rate &lt;5Y&quot;, 
+       x= &quot;Percentage decrease of mortality rate &lt;5Y&quot;,
+       y=&quot; &quot;) +
+  facet_wrap(~region, scales = &quot;free_y&quot;)</code></pre>
+<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-8-1.png" width="648" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggplot(Worst_5, aes(x=change, y=reorder(country,-change), color=&quot;FF6347&quot;)) +
+  geom_col() +
+  theme_bw() +
+  labs(title= &quot;Worst performing countries per region in terms of decrease in \nmortality rate &lt;5Y&quot;, 
+       x= &quot;Percentage decrease of mortality rate &lt;5Y&quot;,
+       y=&quot; &quot;) +
+  facet_wrap(~region, scales = &quot;free&quot;)</code></pre>
+<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-8-2.png" width="648" style="display: block; margin: auto;" />
+North America has a top and worst 2 as there are only two countries in that region. All the other regions have a top and worst 5.</p>
+<p>The best performing countries have experienced a decrease in the mortality rate of just over 91% compared to 1986. West-European and North-American countries tend to score worse as their base mortality rate was better to start of with.</p>
+<p>The worst performing country is by far Dominica, where child mortality under 5 years has not improved, but has actually become worse over the time period. What we concluded for West-European countries becomes prelevant now. Switzerland is the worst performer for the Europe and Central Asia region, but that is because it already started with a low mortality rate to start with.</p>
+<p><strong>5. Lastly, we will take a look at the relationship between primary school enrollment and fertility rate</strong></p>
+<pre class="r"><code>Q5 &lt;- full_dataset %&gt;% 
+  filter(!is.na(Education)) %&gt;% 
+  filter(!is.na(Fertility_Rate))
+
+
+ggplot(Q5, aes(x=Fertility_Rate, y=Education, color=&quot;FF6347&quot;)) +
+  geom_point() + 
+  labs(title= &quot;Are primary school enrollment and fertility rate correlated?&quot;, 
+       x=&quot;Babies per woman&quot;, 
+       y=&quot;% Enrolment in primary school&quot;) +
+  theme_bw() +
+  geom_smooth(method=&#39;lm&#39;, se=FALSE, color=&quot;dark blue&quot;)</code></pre>
+<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-9-1.png" width="648" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>cor_test(Q2$Fertility_Rate, Q2$`GDP_Capita`)</code></pre>
+<pre><code>## 
+##  Pearson&#39;s product-moment correlation
+## 
+## data:  x and y
+## t = -54, df = 8440, p-value &lt;2e-16
+## alternative hypothesis: true correlation is not equal to 0
+## 95 percent confidence interval:
+##  -0.525 -0.493
+## sample estimates:
+##    cor 
+## -0.509</code></pre>
+<p>Once more, we discover a negative correlation between the two variables at hand. Countries where women have a larger amount of kids are also countries where a lower % of the kids goes to primary school.</p>
