@@ -27,7 +27,7 @@ In addition, you will run a hpothesis test. You should use both the `t.test` com
 You can load the data and examine its structure
 
 ```{r load-movies-data}
-movies <- read_csv(here::here("data", "movies.csv"))
+movies <- read_csv(here::here("data", "movies_movies.csv"))
 glimpse(movies)
 ```
 
