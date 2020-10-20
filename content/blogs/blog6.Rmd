@@ -5,7 +5,7 @@ categories:
 date: "2017-10-31T22:42:51-05:00"
 description: What are the highest consuming countries in terms of wine and beer?
 draft: false
-image: beerandwine.jpg
+image: wineandbeer.jpg
 keywords: ""
 slug: blog6
 title: Alcohol Consumption
