@@ -61,7 +61,7 @@ Besides the obvious variables of `title`, `genre`, `director`, `year`, and `dura
 
 - `gross` : The gross earnings in the US box office, not adjusted for inflation
 - `budget`: The movie's budget 
-- `cast_facebook_likes`: the number of facebook likes cast memebrs received
+- `cast_facebook_likes`: the number of facebook likes cast members received
 - `votes`: the number of people who voted for (or rated) the movie in IMDB 
 - `reviews`: the number of reviews for that movie
 - `rating`: IMDB average rating 
