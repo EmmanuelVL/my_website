@@ -127,7 +127,7 @@ disqusShortname = ""
   [params.two]
     enable = true
     title = "My Work"
-    subtitle = """Consider this to be an overview of some of the projects I have worked on during my Data Analytics class. For further information, feel free to contact me through some of my contact details mentioned here below"""
+    subtitle = """Hi, my name is Emmanuel Van Lembergen and I am a 23 year old Belgian. Consider this website to be an overview of some of the projects I have worked on during my Data Analytics class. For further information, feel free to contact me through some of my contact details mentioned here below"""
     buttonText = "Let's Go"
     url = "blogs"
 
