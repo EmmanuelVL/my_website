@@ -5,4 +5,4 @@ image: banner.jpg
 slug: blogs
 ---
 
-My blogs about technology and lifestyle.
+A snapshot of my work during the Data Analytics course.
