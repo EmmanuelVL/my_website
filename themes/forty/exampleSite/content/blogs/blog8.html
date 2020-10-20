@@ -1,16 +1,3 @@
----
-categories:
-- ""
-- ""
-date: "2017-10-31T22:42:51-05:00"
-description: Analysis of GDP, mortality rate, fertility rate and HIV prevelance accross different countries
-draft: false
-image: gapminder.jpg
-keywords: ""
-slug: blog8
-title: Gapminder data
----
-
 
 
 <p>In this part, we will join a few dataframes with more data than the ‘gapminder’ package. Specifically, you will look at data on</p>
@@ -82,7 +69,7 @@ ggplot(Q1, aes(x=HIV, y=Life_Expectancy)) +
   facet_wrap(~region, scales=&quot;free&quot;) +
   theme_bw() +
   geom_smooth(method=&#39;lm&#39;, se=FALSE, color=&quot;dark blue&quot;)</code></pre>
-<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-3-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p><img src="blog8_files/figure-html/unnamed-chunk-3-1.png" width="648" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>cor_test(Q1$HIV, Q1$Life_Expectancy)</code></pre>
 <pre><code>## 
 ##  Pearson&#39;s product-moment correlation
@@ -112,7 +99,7 @@ ggplot(Q2, aes(x=Fertility_Rate, y=GDP_Capita)) +
   theme_bw() +
   facet_wrap(~region, scales=&quot;free&quot;) +
   geom_smooth(method=&#39;lm&#39;, se=FALSE, color=&quot;dark blue&quot;)</code></pre>
-<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-4-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p><img src="blog8_files/figure-html/unnamed-chunk-4-1.png" width="648" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>cor_test(Q2$Fertility_Rate, Q2$`GDP_Capita`)</code></pre>
 <pre><code>## 
 ##  Pearson&#39;s product-moment correlation
@@ -140,7 +127,7 @@ ggplot(Q3, aes(x=total_HIV, y=reorder(region, total_HIV), color=&quot;FF6347&quo
   labs(title= &quot;Europe &amp; Central Asia is the region with the most missing values&quot;, 
        x= &quot;Number of missing values&quot;,
        y=&quot; &quot;)</code></pre>
-<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-5-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p><img src="blog8_files/figure-html/unnamed-chunk-5-1.png" width="648" style="display: block; margin: auto;" /></p>
 <p>Clearly, the region with the largest amount of missing values is ‘Europe and Central Asia’, followed by ‘Sub-Saharan Africa’.</p>
 <p><strong>4. Now we try to figure out how the mortality rate has changed by region, and the top 5 countries who have known the greatest and worst improvement</strong></p>
 <p>Looking at the dataset, it is impossible to compare all countries for the full timeline in the data. This is because not all countries’ data for mortality rate starts in 1960. Some countries start showing data later. The most extreme example is Guinea-Bissau, where data for mortality rate is only mentioned from 1985 onwards. Instead of looking at the data, we will thus answer this question, using a range of <strong>30 years</strong> (1986-2016).</p>
@@ -164,7 +151,7 @@ ggplot(Q4_2, aes(x=average_change, y=reorder(region, average_change), color=&quo
   labs(title= &quot;South Asia has experienced the largest improvement in \nmortality rate under 5 years old&quot;, 
        x= &quot;Percentage decrease of mortality rate &lt;5Y&quot;,
        y=&quot; &quot;)</code></pre>
-<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-7-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p><img src="blog8_files/figure-html/unnamed-chunk-7-1.png" width="648" style="display: block; margin: auto;" /></p>
 <p>Clearly, South Asia has improved the most in the past 30 years in terms of mortality rate for children smaller than 5 years, followed closely by Europe &amp; Central Asia.</p>
 <p>Now that we have this information, it is time to figure out, who were the best performers per region and who were the worst performers.</p>
 <pre class="r"><code>Q4_3 &lt;- Q4_1 %&gt;% 
@@ -189,7 +176,7 @@ ggplot(Top_5, aes(x=change, y=reorder(country,change), color=&quot;FF6347&quot;)
        x= &quot;Percentage decrease of mortality rate &lt;5Y&quot;,
        y=&quot; &quot;) +
   facet_wrap(~region, scales = &quot;free_y&quot;)</code></pre>
-<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-8-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p><img src="blog8_files/figure-html/unnamed-chunk-8-1.png" width="648" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>ggplot(Worst_5, aes(x=change, y=reorder(country,-change), color=&quot;FF6347&quot;)) +
   geom_col() +
   theme_bw() +
@@ -197,7 +184,7 @@ ggplot(Top_5, aes(x=change, y=reorder(country,change), color=&quot;FF6347&quot;)
        x= &quot;Percentage decrease of mortality rate &lt;5Y&quot;,
        y=&quot; &quot;) +
   facet_wrap(~region, scales = &quot;free&quot;)</code></pre>
-<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-8-2.png" width="648" style="display: block; margin: auto;" />
+<p><img src="blog8_files/figure-html/unnamed-chunk-8-2.png" width="648" style="display: block; margin: auto;" />
 North America has a top and worst 2 as there are only two countries in that region. All the other regions have a top and worst 5.</p>
 <p>The best performing countries have experienced a decrease in the mortality rate of just over 91% compared to 1986. West-European and North-American countries tend to score worse as their base mortality rate was better to start of with.</p>
 <p>The worst performing country is by far Dominica, where child mortality under 5 years has not improved, but has actually become worse over the time period. What we concluded for West-European countries becomes prelevant now. Switzerland is the worst performer for the Europe and Central Asia region, but that is because it already started with a low mortality rate to start with.</p>
@@ -214,7 +201,7 @@ ggplot(Q5, aes(x=Fertility_Rate, y=Education, color=&quot;FF6347&quot;)) +
        y=&quot;% Enrolment in primary school&quot;) +
   theme_bw() +
   geom_smooth(method=&#39;lm&#39;, se=FALSE, color=&quot;dark blue&quot;)</code></pre>
-<p><img src="/blogs/blog8_files/figure-html/unnamed-chunk-9-1.png" width="648" style="display: block; margin: auto;" /></p>
+<p><img src="blog8_files/figure-html/unnamed-chunk-9-1.png" width="648" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>cor_test(Q2$Fertility_Rate, Q2$`GDP_Capita`)</code></pre>
 <pre><code>## 
 ##  Pearson&#39;s product-moment correlation

@@ -1,0 +1,890 @@
+---
+categories:
+- ""
+- ""
+date: "2017-10-31T22:42:51-05:00"
+description: Study of how much does an AirBnB in Brussels costs for 2 people and 4 nights?
+draft: false
+image: brussels.jpg
+keywords: ""
+slug: blog5
+title: AirBnB in Brussels
+---
+
+
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+
+#We start this project by downloading all the relevant packages.
+
+library(vroom)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(skimr)
+library(ggplot2)
+library(leaflet)
+library(mosaic)
+library(pals)
+library(GGally)
+library(knitr)
+library(broom)
+library(kableExtra)
+library(car)
+library(ggfortify)
+library(huxtable)
+library(grid)
+library(gridExtra)
+library(modelsummary)
+```
+
+**Executive Summary**
+
+The purpose of this analysis is to predict the price of an AirBnB for two people for four nights in Brussels, Belgium.
+
+We will follow the standard procedure of downloading, understanding, cleaning and analyzing the data, ultimately trying to form a regression model, which will allow us to understand the drivers of AirBnBs in Brussels and predict the price of the aforementioned search.
+
+
+First, we download the relevant dataset, by using 'vroom' and creating a new dataset called listings.
+
+```{r}
+listings <- vroom("http://data.insideairbnb.com/belgium/bru/brussels/2020-06-15/data/listings.csv.gz")
+```
+
+
+**Exploratory Data Analysis**
+
+*Data Inspection*
+
+We begin our analysis by glimpsing and skimming the datasets provided by insideairbnb.com, to get a better understanding of the available datapoints and types. 
+
+```{r, results = "hide"}
+glimpse(listings)
+```
+
+By glimpsing, we find that the dataset has 106 variables with 8986 observations. However, some of these variables such as price, cleaning fees and the price for extra people are incorrectly stored as character variables and need to be converted into numeric data before we can begin with our analysis. 
+
+```{r, results = "hide"}
+skim(listings)
+
+```
+
+Additionally by skimming the data, we observe the presence of duplicates as well as missing values, which we will have to clean to allow for a thorough analysis.
+
+Below is an overview of the most relevant variables. Prices are denoted in US dollar.
+
+- price = cost per night
+
+- cleaning_fee: cleaning fee
+
+- extra_people: charge for having more than 1 person
+
+- property_type: type of accommodation (House, Apartment, etc.)
+
+- room_type: Entire home/apt (guests have entire place to themselves), Private room (Guests have private room to sleep, all other rooms shared), Shared room (Guests sleep in room shared with others)
+
+- number_of_reviews: Total number of reviews for the listing
+
+- review_scores_rating: Average review score (0 - 100)
+
+- longitude , latitude: geographical coordinates to help us locate the listing
+
+- neighbourhood*: three variables on a few major neighbourhoods in each city
+
+
+*Data Cleaning*
+
+After skimming the data, we select a list of variables we deem relevant for this research. These are variables that might have an effect on the price and which we will use later to run our regressions. We take a look at our selected variables in the following table:
+
+```{r, results = "hide"}
+interested_variables <- listings %>% 
+  select(id,
+         listing_url,
+         price,
+         cleaning_fee,
+         extra_people,
+         security_deposit,
+         property_type,
+         room_type,
+         number_of_reviews, 
+         review_scores_rating, 
+         longitude, 
+         latitude, 
+         is_location_exact, 
+         neighbourhood_cleansed, 
+         bathrooms, 
+         bedrooms, 
+         beds, 
+         host_identity_verified, 
+         host_is_superhost, 
+         accommodates, 
+         cancellation_policy,
+         host_listings_count,
+         guests_included,
+         minimum_nights,
+         review_scores_accuracy,
+         review_scores_cleanliness,
+         review_scores_checkin,
+         review_scores_communication,
+         review_scores_location,
+         review_scores_value
+         )
+
+glimpse(interested_variables)
+skim(interested_variables)
+```
+
+We noticed that some of these variables are unoperable as they are denoted as character variables. We now decide to change these into numeric variables, which will allow us to perform operations on them.
+
+```{r}
+interested_listings <- interested_variables %>% 
+  mutate(price = parse_number(price),
+         cleaning_fee=parse_number(cleaning_fee),
+         extra_people=parse_number(extra_people),
+         security_deposit=parse_number(security_deposit)) %>% 
+  mutate(id=as.character(id))
+
+```
+
+Additionally, we delete the missing variables for prices, erase any duplicates in id's and filter out the missing variables for bedrooms, beds and review_scores_rating. We also immediately filter for airbnb stays where the minimum number of stays exceeds 4 nights, as we are only interested in a 4 night stay for this particular analysis. 
+
+```{r, results = "hide"}
+interested_listings <- interested_listings %>% 
+  filter(is.na(price)==FALSE) %>% 
+  filter(duplicated(id)==FALSE) %>% 
+  filter(is.na(bedrooms)==FALSE) %>%
+  filter(is.na(beds)==FALSE) %>%
+  filter(is.na(review_scores_rating)==FALSE) %>%
+  filter(minimum_nights<=4)
+  
+skim(interested_listings)
+```
+
+Next, after having had a closer look at the data, we noticed that cleaning_fee and extra_people had missing variables. In order to use the variables extra_people and cleaning_fee, we turn the missing variables into zeroes. We assume that if there is no available information for the cleaning fee or the amount you pay for extra people to stay over, it is zero.
+
+```{r}
+interested_listings <- interested_listings %>%
+  mutate(extra_people = case_when(is.na(extra_people) ~ 0, TRUE ~ extra_people)) %>% 
+  mutate(cleaning_fee = case_when(is.na(cleaning_fee) ~ 0, TRUE ~ cleaning_fee)) %>% 
+  mutate(security_deposit = case_when(is.na(security_deposit) ~ 0, TRUE ~ security_deposit))
+
+```
+
+Also, we want to reduce the amount of property_types in our dataset. We screen the property types so we can bundle them into comparable chuncks. For simplicity sake we take the first five variables and bundle the rest under 'other'.
+
+```{r}
+
+interested_listings %>% 
+  group_by(property_type) %>% 
+  summarize(count=n()) %>% 
+  arrange(desc(count))
+
+
+interested_listings <- interested_listings %>%
+  mutate(prop_type_simplified = case_when(
+    property_type %in% c("Apartment","House", "Condominium","Townhouse", "Loft") ~ property_type, 
+    TRUE ~ "Other"
+  ))
+
+interested_listings %>%
+  count(property_type, prop_type_simplified) %>%
+  arrange(desc(n))
+
+```
+
+We remove the remaining missing values to create a clean dataset
+
+```{r, results = "hide"}
+interested_listings <- interested_listings %>% 
+  filter(is.na(host_identity_verified)==FALSE) %>% 
+  filter(is.na(host_is_superhost)==FALSE) %>% 
+  filter(is.na(bathrooms)==FALSE) %>% 
+  filter(is.na(review_scores_accuracy)==FALSE) %>% 
+  filter(is.na(review_scores_cleanliness)==FALSE) %>% 
+  filter(is.na(review_scores_checkin)==FALSE) %>% 
+  filter(is.na(review_scores_communication)==FALSE) %>% 
+  filter(is.na(review_scores_location)==FALSE) %>% 
+  filter(is.na(review_scores_value)==FALSE) 
+
+skim(interested_listings) 
+```
+
+One last comment regarding our dataset. We chose to include only 1 of 3 neighbourhood variables. The original ones were neighbourhood, neighbourhood_cleansed and neighbourhood_group_cleansed. The reason for which we decided to only include neighbourhood_cleansed is the following. Neighbourhood_group_cleansed consists solely of missing data and the orignal neighbourhood variable was not consistent enough. For some properties it would give the neighbourhood, but for others it would give a more specifid location such as a metro station, street name or a square. We therefore opted to choose for the neighbourhood_cleansed variable as we only find neighbourhoods in Brussels.
+
+At last we compute the price that 2 people would need to pay for each airbnb offer for a duration of 4 nights. We do this by multiplying the price per night by 4, adding any cleaning fees that may apply and adding the additional cost of extra people, if the host has specified that the price only includes 1 person. 
+
+```{r}
+final_listings <- interested_listings %>%
+  mutate(extra_cost = as.numeric(guests_included < 2)) %>%
+  mutate(price_4_nights= price * 4 + cleaning_fee + extra_people * extra_cost)
+
+```
+
+
+**Data Visualization**
+
+We want to get an idea of the key statistics in our dataset. So we begin by selecting a few variables and have a look at the main statistics using the mosaic package.
+
+```{r}
+
+
+data_summary <- datasummary (price + 
+               price_4_nights +
+               cleaning_fee +
+               extra_people +
+               security_deposit +
+               number_of_reviews + 
+               review_scores_rating +
+               guests_included +
+               minimum_nights 
+             ~ Min + P25 + Median +P75 +Max +Mean + SD, 
+             data = final_listings)
+
+```
+
+We see that though our median and mean prices are 60 and 74.9 respectively, we have some outliers in the min and the max. Some properties are listed for 0 and the most expensive place would be 3500 per night. We first considered getting rid of the properties with a price of 0, but considering the price for 4 nights has a minimum of 36.0, we consider that these properties with a price per night might have a different business model. Maybe they are charitable houeses where you only pay for the cleaning fee? 
+
+```{r}
+
+data_summary %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped")
+
+
+```
+
+
+Next, we want to have a look at how prices are distributed in Brussels.
+
+```{r}
+
+ggplot()+
+  geom_histogram(aes(x=final_listings$price_4_nights, fill = "steelblue"), bins=40) +
+  labs(title="AirBnB Brussels charges $323",
+       subtitle= "Distribution of prices for a 4 night AirBnB in Brussels",
+       x= "Log Prices in $",
+       y= "Number of AirBnB's") +
+  scale_x_log10() +
+  theme_minimal() +
+  geom_vline(xintercept = mean(final_listings$price_4_nights), size= 1, color="#FFDB6D") +
+  geom_text(aes(x=mean(final_listings$price_4_nights), y= -0.1), 
+            label = round(mean(final_listings$price_4_nights))) +
+  theme(legend.position = "none")
+  
+```
+
+We can see that the overall distribution of prices follows what can be interpreted as something close to a normal distribution. The average price of a four night stay for two people is $323, but there are multiple entries way below and way above, which we will try to find out what may be the drivers of these significant price differences later on in our analysis. 
+
+Next, we want to see how the cleaning fees are distributed across AirBnBs as these are very relevant when considering the prices for the 4 night stay for 2 people. 
+
+```{r, warning=FALSE}
+
+final_listings %>%
+  ggplot() +
+  geom_density(aes(x = cleaning_fee) ,  fill = "steelblue") +
+  labs(title = "Cleaning fees almost always apply!", 
+       subtitle = "Distribution of cleaning fees across all airbnb offers",
+        y = 'Density' , 
+        x  = 'Log Cleaning Fee in $') +
+  scale_x_log10()+
+  theme_minimal()+
+  geom_vline(xintercept =  mean(final_listings$cleaning_fee), size = 1 , color="#FFDB6D") +
+   geom_text(aes(x=mean(final_listings$cleaning_fee), y= -0.1), 
+            label = round(mean(final_listings$cleaning_fee))) +
+  theme(legend.position = "none")
+
+```
+
+We see that in most cases cleaning fees apply, but again there is quite a spread when considering the actual amount payable and cleaning fees go up until over $100!
+
+After seeing that cleaning fees have such a wide distribution, we wonder how the extra_costs are distributed and plot them below. 
+
+```{r, warning=FALSE}
+final_listings %>%
+  ggplot() +
+  geom_density(aes(x = extra_people) ,  fill = "steelblue") +
+  labs(title = "A wide range of costs associated with bringing more guests", 
+       subtitle = "Distribution of extra costs across all airbnb offers",
+        y = 'Density' , 
+        x  = 'Log Extra Cost of more people in $') +  
+  scale_x_log10()+
+  theme_minimal()+
+  geom_vline(xintercept =  mean(final_listings$extra_people), size = 1 , color="#FFDB6D") +
+   geom_text(aes(x=mean(final_listings$extra_people), y= -0.1), 
+            label = round(mean(final_listings$extra_people))) +
+  theme(legend.position = "none")
+
+```
+
+We see that there is a wide range and fluctuation when it comes to the extra cost associated with being more guests than allowed. The allocation of extra costs seems to be random, if one were to look at this graph, or at least we can say that the costs are definitely not normally distributed. 
+
+Next, we want to get an understanding of where exactly the airbnb's on offer are located. To do this we use leaflet. 
+
+```{r, warning=FALSE}
+final_listings %>% 
+  leaflet() %>% 
+  addProviderTiles("OpenStreetMap.Mapnik") %>% 
+  addCircleMarkers(lng = ~longitude, 
+                   lat = ~latitude, 
+                   radius = 1,
+                   fillOpacity = 0.4, 
+                   popup = ~listing_url,
+                   label = ~property_type,
+                   clusterOptions = markerClusterOptions())
+
+```
+
+We see that there are multiple clusters of airbnb hubs and within each cluster a high variety of individual locations. Of course, we could have grouped some neighbourhoods together, however we believe that the location of the listing will be very relevant for the estimation of a price, which is why at this point in time we would not consider grouping locations, but rather leaving the neighbourhoods seperate. 
+
+At last, we are interested in the size of accommodations that are on the market. As we are particularly interested in offers for 2 people, we would hope to see that there is plenty of supply catering towards our needs. 
+
+```{r, warning=FALSE}
+final_listings %>% 
+  ggplot() +
+  geom_density(aes(x = accommodates) ,  fill = "steelblue", color = "steelblue") +
+  labs(title = "3 Guests is the mean, but we will find plenty of apartments for 2!", 
+       subtitle = "Distribution of number of guests accomodated by each listing",
+        y = 'Density' , 
+        x  = 'Number of poeple accomodated by each listing') +
+  theme_minimal()+
+  geom_vline(xintercept =  mean(final_listings$accommodates), size = 1 , color = "#FFDB6D") +
+   geom_text(aes(x = mean(final_listings$accommodates), y = -0.03) , label = round(mean(final_listings$accommodates))) +
+  theme(legend.position = "none")
+
+```
+
+We see from the above graph, that most listings are for less than 4 people. The average accommodates per listing is 3, however we also notice 2 spikes for 2 and 4 guest listings. This is great news, as we are searching for the price of a listing for 2 people and hopefully the laws of supply and demand will allow us to find a cheaper price as the supply of 2 guest listings seems to be highest (probably this high supply is also matched by a higher demand as well though).
+
+**Visualizing Relationships between Variables**
+
+Now we want to start visualizing some relationships between variables, specifically the relationships between property type and the price of a 4 night stay for two people, as well as the impact that ratings might have on the pricing of a listing. Also, we would be interested in seeing a relationhship between the location of a listing and the prices demanded. 
+
+We begin by visualizing the relationhsip between the property type and the price for 2 people and 4 nights. 
+
+```{r, warning=FALSE}
+
+final_listings %>% 
+  ggplot(aes(prop_type_simplified, price_4_nights)) +
+  geom_boxplot(fill = "steelblue") +
+  theme_minimal() +
+  scale_y_log10() +
+  labs(y = "Log Price for 2 people and 4 nights in $", 
+       x = "",
+       title = "Somewhat similar prices across property types, but with high variation",
+       subtitle = "Price for 2 people and 4 nights by property type")
+
+```
+
+The plot confirms that each listing is unique, which is also the reason why we see significant variations of prices within each property segment. Nevertheless, the median price for 2 people and 4 nights seems to be more similar across different property types than we would have expected. It is surprising to see that a house seems to be cheaper than a loft or a condominium. But, of course there are multiple other factors playing into the pricing of each property. Factors we will try to identify later on in our analysis. 
+
+Next, we want to analyse the impact of ratings on prices. We wonder whether there is a positive relationship between the two variables?
+
+```{r, warning=FALSE}
+
+final_listings %>% 
+  ggplot(aes(x = review_scores_rating, y = price_4_nights)) +
+  geom_point() +
+  stat_smooth(method=lm) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_minimal() + 
+  labs(x = "Log Rating Score", 
+       y = "Log Price for 2 people and 4 Nights", 
+       title = "No clear relationship between ratings and prices",
+       subtitle = "Relationship between price for 2 people / 4 nights and rating score",
+       color = "Number of reviews") 
+
+cor.test(final_listings$review_scores_rating, final_listings$price_4_nights)
+
+```
+
+We can see that most ratings fall between 75 and 100 and that there seems to be little correlation between the price of a property and its respective rating on the platform. However, we would like to check whether the apartment listed above 10,000 is an outlier and if we could maybe exclude this from our analysis. However, we would only do this if this change would not significantly effect the relationship analysis between reviews and price for 4 nights.
+
+```{r, warning=FALSE}
+
+final_listings_review <- final_listings %>% 
+  filter(price_4_nights <= 10000)
+
+final_listings_review %>% 
+  ggplot(aes(x = review_scores_rating, y = price_4_nights)) +
+  geom_point() +
+  stat_smooth(method=lm) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_minimal() + 
+  labs(x = "Log Rating Score", 
+       y = "Log Price for 2 people and 4 Nights", 
+       title = "No clear relationship between ratings and prices",
+       subtitle = "Relationship between price for 2 people / 4 nights and rating score",
+       color = "Number of reviews") 
+
+cor.test(final_listings_review$review_scores_rating, final_listings_review$price_4_nights)
+
+```
+
+We find that by excluding the highly prices variable from our analysis, the correlation significantly increases and in order to stay as close to the sample as we can within our analysis, we decide to not exclude any listings based on price and will therefore continue operating with the dataset final_listings. Additionally, regarding the relationship between review scores and price for 4 nights, the relationship makes sense and one could easily imagine a student couple living in a low budget flat and leaving a high review for its peer group as well as a rich middle aged couple, living in a beautiful townhouse and leaving a similar review as the student couple. However, we wonder how the number of reviews might be related to the actual reviews themselves. Is it reinforcing, such that the better the review, the more ratings and hence the more visitors, the more reviews and so on?
+
+```{r}
+
+grouped <- final_listings %>% 
+  mutate(buckets=ntile(number_of_reviews, 4)) %>% 
+  group_by(buckets) 
+
+grouped$buckets <- as.factor(grouped$buckets)
+
+grouped %>% 
+  select(buckets, number_of_reviews) %>% 
+  group_by(buckets) %>% 
+  summarize(min1=min(number_of_reviews),
+            max1=max(number_of_reviews))
+
+ggplot(grouped, aes(x=buckets, y=review_scores_rating)) +
+  geom_boxplot(fill = "steelblue") +
+  labs(y = "Review Scores", 
+       x = "Number of Reviews",
+       title = "Review Score lowers in average and variability as number of reviews increases") +
+  theme_minimal()
+
+```
+
+To do the above, we first group the number of reviews into four buckets. We then draw a boxplot to show the distribution of the reviews for each bucket. However, we see that the more reviews a property has, the lower its average score and variability. After some research we found that this is due to the nature of the search engine provided by airbnb. Because, in order to avoid monopolization of a few flats, once a property receivs many reviews, the platform stops recommending the property to new customers. For this reason, hosts often take a property off the market only to re-list it shortly after, which would explain the dynamic represented in the boxplot above. 
+
+Also, we would be interested in seeing the relationship between the type of room and the price for 2 people and 4 nights. 
+
+```{r}
+
+final_listings %>% 
+  ggplot(aes(room_type, price_4_nights)) +
+  geom_boxplot(fill = "steelblue") +
+  theme_minimal() +
+  scale_y_log10() +
+  labs(y = "Log Price for 2 people and 4 nights in $", 
+       x = "Type of Room",
+       title = "The Type of room seems to have an effect on the price of the listing!",
+       subtitle = "Price for 2 people and 4 nights in $ by room type")
+
+```
+
+As was to be expected, the median price of a property for 2 people and 4 nights differs depending on the type of room. For example, the median price of a hotel room is much higher when compared to the average price of a shared room, which intuitively makes a lot of sense. 
+
+Also, we wonder whether the fact that the host is a superhost has any influence on the price demanded. 
+
+```{r}
+
+final_listings %>% 
+  ggplot(aes(host_is_superhost, price_4_nights)) +
+  geom_boxplot(fill = "steelblue") +
+  theme_minimal() +
+  scale_y_log10() +
+  labs(y = "Log Price for 2 people and 4 nights in $", 
+       x = "Is the Host a Superhost?",
+       title = "Being a Superhost does not have a large impact on Price",
+       subtitle = "Price for 2 people and 4 nights in $ by room type")
+```
+
+Surprisingly, whether the host is a superhost or not has not such a large impact on the price as we would have expected. There is a slightly higher median price demanded and we also notice a smaller variability, however it seems to be that users care more about the actual property than the reputation of the host. 
+
+At last, we wonder whether there might be a relationship between the price of a property and it's location. To do this we plot 
+Location and Price
+
+```{r}
+pal <- colorQuantile(
+  palette = c("#fee8c8", "#fdbb84", "#e34a33"), final_listings$price_4_nights, n = 20) 
+
+final_listings %>% 
+leaflet() %>% 
+  addProviderTiles("OpenStreetMap.Mapnik") %>% 
+  addCircleMarkers(lng = ~longitude, 
+                   lat = ~latitude, 
+                   radius = 1,
+                   fillOpacity = 0.4, 
+                   popup = ~listing_url,
+                   label = ~property_type,
+                   color = ~pal(price_4_nights))
+```
+
+It seems as was to be expected that there is quite a variety in prices for two people and four nights across the different locations. 
+
+
+**Visualizing the correlations between multiple variables**
+
+In this section we want to analyze the correlations amongst explanatory variables as to investigate any potential colinearities, as to be able to select explanatory variables which will not have a negative impact on the quality of our regression model. 
+
+```{r}
+final_listings %>% 
+  select(price_4_nights, 
+         security_deposit, 
+         number_of_reviews, 
+         review_scores_rating, 
+         bathrooms, 
+         bedrooms, 
+         beds, 
+         accommodates) %>% 
+  ggpairs(aes(alpha=0.1))
+```
+
+We find that confirming with the former analysis, the number of reviews as well as the review score are not significantly correlated with the price for 4 nights. However, we notice that the security deposit is signficantly correlated as well as the variables bathrooms, bedrooms, beds and accommodates, even though the latter four also show collinearity amongst each other. We will not to test the significance of the security deposit and the other variables in our regression model keeping the collinearity in mind.  
+
+**Building a Regression Model**
+
+We will now start by building a baseline model called model1 with the explanatory variables being prop_type_simplified, number_of_reviews, and review_scores_rating. 
+
+```{r}
+
+model1 <- lm(price_4_nights ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating, 
+             data= final_listings)
+
+model1 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model1 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model1)
+
+```
+
+Judging from this first model, our baseline intercept represents the price of an apartment with 0 reviews and a rating of 0. For such an apartment our estimated price would be $235.8. Also, we find that for three property types (Condominium, House and Townhouse), the p-value is far above 5% and so we cannot say that there exists a significant difference between the price of a condominium, an apartment, a house or a townhouse as such. Furthermore, the incremental effect of having more reviews and a higher score is negative and positive, respectively. We are reminded of the negative relationship we saw in our analysis before. However, we also notice that both p-values are above 5% and so we cannot say that either of them will affect our estimated price for 2 people listing for 4 nights. 
+
+The adjusted RSquared of our model is 1.84%, meaning that 1.84% of the observed variation in prices can be explained by our current model. There must be room for improvement here!
+
+Also, we note that our VIF tells us that there is no collinearity amongst our independent variables, which would negatively impact the quality of our model so far. 
+
+We want to continue our analysis and will examine whether room_type is relevant for the estimation of our price and will therefore create a new model2
+
+```{r}
+
+model2 <- lm(price_4_nights ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating +
+               room_type, 
+             data= final_listings)
+
+model2 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model2 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model2)
+
+autoplot(model2, label = FALSE)+
+  theme_minimal() +
+  theme(axis.text.x=element_blank()) 
+
+```
+
+We notice that room type has a significant influence on the estimation of price for 2 people and 4 nights. Our baseline model considers an entire home / apartment and we see that a change in room type leads to a statistically significant change in our price estimate across all types of rooms. Our baseline model price with an entire apartment 0 number of reviews and 0 review score is now estimated to cost $272.8 for 2 people and 4 nights. Also, it is important to note that by introducing the distinction between different types of rooms, we suddenly see that Townhouse and House become statistically significant. We can assume that by distinguishing further, our model can more clearly define the effect that each of these factors has on the price. The intuition is again confirmed, as it is logical to expect a hotel room to be more expensive and a private room and shared room to be cheaper than an entire apartment for oneself. 
+
+We also notice that our new adjusted RSquared value has increased to 8.78% with a similar meaning as was explained before. Also, judging from the VIF analysis, we note that none of the variables are significantly collinear and thus there is no reason to exclude any of our independent variables from our regression model. 
+
+At last, we do our first residual analysis using autoplot. For the residuals vs. fitted we see a random distribution and an indication of the presence of non-linearity. We also obsverve from the Normal Q-Q, that the residuals appear rather normal, however the upper tail has a heavier distribution, which could be explained by the fact that some airbnbs have higher prices subject to certain factors. There is a slightly increasing trend in residual variance in the scale-location plot, which we will try to reduce in our next models. Finally, the residuals vs factor levels leverage graph shows that the scale of residuals is similar on average for all factor levels. Nonetheless, we observe some extreme values, which could be due to our decision not to eradicate certain extreme values from our analysis, specifically regarding the highly priced listings. 
+
+Before, whilst visualizing correlations between variables, we noted that accommodates, bedrooms, beds and bathrooms had a significant correlation with prices and thus we would like to include these variables into a new model3 and see the effects that this has. 
+
+```{r}
+
+model3 <- lm(price_4_nights ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating +
+               room_type +
+               accommodates +
+               bedrooms +
+               bathrooms +
+               beds,
+             data= final_listings)
+
+model3 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model3 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model3)
+
+autoplot(model3, label = FALSE)+
+  theme_minimal() +
+  theme(axis.text.x=element_blank()) 
+
+```
+
+By introducing these four explanatory variables into our model, a couple of things change. First the p value for our intercept becomes negative and statistically insignificant. We observe a higher adjusted r squared and also no significant collinearity (except for beds and accommodates, which we saw in our prior analysis were correlated with one another, however their collinearity is in order (VIF below 5) and we do not expect it to significantly impact the quality of our model up to this point). Nevertheless, we notice a clear increasing trend in residual variance that runs through most of our plot and thus we would like to log the price for 4 nights in our next model. 
+
+```{r}
+
+model4 <- lm(log(price_4_nights) ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating +
+               room_type +
+               accommodates +
+               bedrooms +
+               bathrooms +
+               beds,
+             data= final_listings_review)
+
+model4 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model4 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model4)
+
+autoplot(model4, label = FALSE)+
+  theme_minimal() +
+  theme(axis.text.x=element_blank()) 
+
+```
+
+By using log(price_4_nights) we find that our intercept and coefficent values obviously change in magnitude. This we will have to readjust into dollar values at the end of our analysis. However, more importantly, we notice a significant increase in our adjusted r squared to 50.3%. Additionally, most of our variables are statistically significant. For beds, we would like to monitor the development of the pvalue in future models. If it continues to be insiginificant we might exclude it from our regression model. 
+
+Also, we see a significant change in the distribution of our residuals. They are still randomly distributed across the fitted values, however we now notice two heavier tails (lower and upper), so it seems that there might also be certain outliers on the lower scale of prices in our dataset. The scale-location shows no clear discernible trend and also the residuals vs leverage is without a clear trend. 
+
+Next, we would like to explore the effect that the different neighbourhoods have on our analysis. As mentioned before we have so far decided to not group the neighbourhoods as we could imagine the effect of each neighbourhood to be sensitive towards our price estimate and so we would first like to examine it on a larger scale. 
+
+```{r}
+
+model5 <- lm(log(price_4_nights) ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating +
+               room_type +
+               accommodates +
+               bedrooms +
+               bathrooms +
+               beds +
+               neighbourhood_cleansed,
+             data= final_listings)
+
+model5 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model5 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model5)
+```
+
+We see that multiple neighbourhoods have no statistically significant impact on the estimated price. Thus, we decide to group all these neighbouhoods with very insignificant price effects into Others. The remaining neighbourhoods are kept as are and the new information will be displayed in a new variable called neighbourhood_simplified. 
+
+```{r}
+
+other_neighbourhoods <-c("Auderghem", 
+                         "Berchem-Sainte-Agathe", 
+                         "Etterbeek",
+                         "Evere", 
+                         "Ganshoren", 
+                         "Jette", 
+                         "Molenbeek-Saint-Jean",
+                         "Saint-Gilles",
+                         "Saint-Josse-ten-Noode",
+                         "Uccle",
+                         "Watermael-Boitsfort",
+                         "Woluwe-Saint-Lambert",
+                         "Woluwe-Saint-Pierre")
+
+final_listings <- final_listings %>%
+  mutate(neighbourhood_simplified = case_when(neighbourhood_cleansed %in% other_neighbourhoods ~ "Other",
+                                              neighbourhood_cleansed == "Bruxelles" ~ "Bruxelles",
+                                              neighbourhood_cleansed == "Forest" ~ "Forest",
+                                              neighbourhood_cleansed == "Ixelles" ~ "Ixelles",
+                                              neighbourhood_cleansed == "Koekelberg" ~ "Koekelberg",
+                                              neighbourhood_cleansed == "Schaerbeek" ~ "Schaerbeek",
+                                              neighbourhood_cleansed == "Anderlecht" ~ "Anderlecht",
+                                              ))
+
+
+model6 <- lm(log(price_4_nights) ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating +
+               room_type +
+               accommodates +
+               bedrooms +
+               bathrooms +
+               beds +
+               neighbourhood_simplified,
+             data= final_listings)
+
+model6 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model6 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model6)
+
+autoplot(model6, label = FALSE)+
+  theme_minimal() +
+  theme(axis.text.x=element_blank()) 
+
+```
+
+We find that all the neighbourhoods in neighbourhood_simplified have a significant effect on the estimated price. Additionally, we notice that the adjusted r squared has not changed by much at all. The VIF analysis shows that no variables are significantly collinear and the residuals analysis is more or less unchanged to what we saw in model 4, except the fact that the distribution of residuals seems even more random than before. 
+
+Next, we want to analyse the impact that security_deposit might have on the price. We found in our correlation amongst variables analysis that there was a correlation between security_deposit and price and thus we would like to add this factor into our regression model. Additionally, we still notice that beds are statistically insignificant (probably due to the high correlation with accommodates as indicated by the VIF). If this continues to be the case in model7 we will decide to drop this variable from our analysis. 
+
+```{r}
+
+model7 <- lm(log(price_4_nights) ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating +
+               room_type +
+               accommodates +
+               bedrooms +
+               bathrooms +
+               beds +
+               neighbourhood_simplified + 
+               security_deposit,
+             data= final_listings)
+
+model7 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model7 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model7)
+```
+
+Security deposit has a very small though statistically significant effect on our estimation of prices. We thus decide to keep it in our model. Also, we notice that the adjusted r squared has continued to increase. 
+
+We continue our analysis by adding two last variables, which we believe could have a significant impact on our price estimate model. One is the cancellation policy and the other is whether the host is a superhost or not. 
+
+```{r}
+
+model8 <- lm(log(price_4_nights) ~ prop_type_simplified +
+               number_of_reviews +
+               review_scores_rating +
+               room_type +
+               accommodates +
+               bedrooms +
+               bathrooms +
+               neighbourhood_simplified + 
+               security_deposit +
+               cancellation_policy +
+               host_is_superhost,
+             data= final_listings)
+
+model8 %>% 
+  broom::tidy(conf.int=TRUE)%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+model8 %>% 
+  broom::glance()%>%
+  kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+vif(model8)
+
+autoplot(model8, label = FALSE)+
+  theme_minimal() +
+  theme(axis.text.x=element_blank()) 
+```
+
+We now find that only the 14 grace period has a serious effect when trying to estimate the price of a 4 night stay for 2 people. People tend to be indifferent between a moderate, strict or flexible cancellation policy. Also, having a superhost will have an impact on the price to be expected from our stay in Brussels. The VIF analysis shows that all of our variables are relevant and far below the threshold of 5. Also we notice that for this final model, the residuals are randomly distributed amongst the fitted values, we see the heavy lower and upper tail as was explained before and for the scale-location and the residuals vs leverage we see no clear trend across the plots. 
+
+We now want to summarize the various models we have so far built. We will exclude model5, the reason being the presence of multiple neighborhoods we later on grouped, which would make the table unnecessarily long. 
+
+```{r}
+
+huxreg(list("Model 1" = model1, 
+            "Model 2" = model2, 
+            "Model 3" = model3, 
+            "Model 4" = model4, 
+            "Model 6" = model6, 
+            "Model 7" = model7,
+            "Model 8" = model8))
+
+```
+
+From our summary table we can say that our adjustment and additions have allowed us to establish a model with the highest r squared of 54.1%. This compares to our original r squared (model1) of 2%. Most of our variables are fully or partly statistically significant, but we rather have this results that take them out or regroup them as we believe a certain breadth of variables allows for a better estimation of the final price depending on our choices and preferences. 
+
+**What will it cost us?**
+
+We will use our final model (model8) to predict with a 95% confidence interval how much it will cost 2 people to stay 4 nights in Brussels, specifically, sleeping at an apartment with a private room, at least 10 reviews and an average rating of at least 90.
+
+To do this we create a variable for our own preferences filtering according to the aforementioned requirements. We then create a new dataframe, predicting the price based on our model8 and our preferences and the confidence interval. 
+
+```{r}
+
+our_preferences <- final_listings %>% 
+  filter(room_type == "Private room" & review_scores_rating >= 90 & number_of_reviews >= 10)
+
+predicted <- as.data.frame(predict(model8, newdata = our_preferences, interval = "confidence"))
+
+```
+
+Next we create a new column called predicted_price_4_nights and change it to a dollar value. Below is a sample of 10 price expectations in $. 
+
+```{r}
+
+predicted %>%
+  mutate(predicted_price_4_nights = exp(fit)) %>%
+  select(c("predicted_price_4_nights")) %>%
+  sample_n(10) %>%
+  kable(format.args = list()) %>% 
+  kable_classic(full_width = F )
+```
+
+At last we summarize some statistics inlcuding our predicted price, the minimum and maximum price we expect, as well as the standard deviation and the lower and upper 95% confidence interval levels. 
+
+```{r}
+
+predicted %>%
+  mutate(predicted_price_4_nights = exp(fit)) %>%
+  summarize(min = min(predicted_price_4_nights),
+            max = max(predicted_price_4_nights),
+            predicted = mean(predicted_price_4_nights), 
+            stddev = sd(predicted_price_4_nights), N=n(),
+            lower = predicted-abs(qt(0.025,N))*stddev , 
+            upper = predicted+abs(qt(0.025,N))*stddev) %>%
+  knitr::kable(digits=2) %>% 
+  kable_classic(full_width = F )
+
+
+```
+
+
+
+We find that two people searching for a private room, with at least 10 reviews and a review score of 90 in Brussels will face an average predicted cost of $182.81 for four nights with a lower and upper 95% confidence interval of $100.44 and $265.18, respectively. 
+
+**Limitations and Conclusion**
+
+Using our best model, which explains 54% of the price variable, we were able to calculate an expected price for a private rooom, with at least 10 reviews and a review score higher than 90. We conclude that the cost would be around 182.81 dollar. Statistically speaking, we can be 95% certain that our true population mean will fall 100.44 dollar and 265.18 dollar.
+
+Nevertheless, we do acknowledge this research has its limitations:
+
+- Firstly, we gathered our data from insideairbnb.com. Whilst the data seems reliable, it is built up by individual storytellers and thus has not the same reliability as if it would have come from AirBnB itself.
+
+- Moreover, due to gaps in the data, we were unable to keep the 8986 observations. We ended up trimming these down to 6004 for our models and in our final price prediction (because of the specific apartment type and rating requirements) we ended up with only 904 observations.
+Cutting down on all this data, though necessary, reduces the reliability of our findings.
+

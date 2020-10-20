@@ -1,0 +1,145 @@
+---
+categories:
+- ""
+- ""
+date: "2017-10-31T22:42:51-05:00"
+description: What are the highest consuming countries in terms of wine and beer?
+draft: false
+image: wineandbeer.jpg
+keywords: ""
+slug: blog6
+title: Alcohol Consumption
+---
+
+
+
+```{r, setup, echo=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.width=6.75, 
+  fig.height=6.75,
+  fig.align = "center"
+)
+```
+
+
+```{r load-libraries, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)  # Load ggplot2, dplyr, and all the other tidyverse packages
+library(mosaic)
+library(ggthemes)
+library(lubridate)
+library(fivethirtyeight)
+library(here)
+library(skimr)
+library(janitor)
+library(vroom)
+library(tidyquant)
+library(rvest)    # scrape websites
+library(purrr)  
+library(lubridate) #to handle dates
+library(ggrepel)
+```
+
+
+# Where Do People Drink The Most Beer, Wine And Spirits?
+
+**Back in 2014, [fivethiryeight.com](https://fivethirtyeight.com/features/dear-mona-followup-where-do-people-drink-the-most-beer-wine-and-spirits/) published an article on alcohol consumption in different countries. The data `drinks` is available as part of the `fivethirtyeight` package. Make sure you have installed the `fivethirtyeight` package before proceeding.**
+
+```{r, load_alcohol_data}
+library(fivethirtyeight)
+data(drinks)
+
+```
+
+
+*What are the variable types? Any missing values we should worry about?* 
+
+
+
+```{r glimpse_skim_data}
+
+glimpse(drinks)
+skim(drinks)
+
+```
+By glimpsing and skimming the data, we see that there are two variable types in the data set. "Country" being a character variable and "beer_servings", "spirit_servings", "wine_servings" and "total_liters_of_pure_alcohol" being a numeric variable. By skimming the data we also see that there are no missing values we need to worry about in our analysis. 
+
+
+*Make a plot that shows the top 25 beer consuming countries*
+
+
+```{r beer_plot}
+
+top25_beer <- drinks %>% 
+  arrange(desc(beer_servings)) %>% 
+  slice(1:25)
+
+ggplot(top25_beer, aes(x=beer_servings, y=reorder(country,beer_servings))) + 
+  geom_col(fill="#DD0000", width=0.7) + 
+  labs(x="Beer Servings (litres per year)", y="Country") + 
+  ggtitle("Top 25 Beer Consuming Countries", "Litres of Beer Consumed per Year by each Country") +
+  theme(panel.background = element_rect(colour = "White")) + 
+  theme_light() +
+  scale_x_continuous(expand = c(0,0)) 
+
+
+```
+
+In order to make an initial plot showing the top 25 beer consuming countries, we need to create a new data set. We do this based on the original data set "drinks". We first arrange this new data set in descending order based on beer_servings and slice the top 25 countries. 
+
+Afterwards we plot the new data set. We decided to use a bar chart in order to show the volume of each country respectively. Furthermore, stacking the bars horizontally allowed us to create a clearer picture (ordering the countries from top to bottom). We place the countries on the y-axis and the litres consumed per year on the x-axis. This allows for a clear and easily comparative overview of the results. Labelling the axis and giving the plot a title, we proceed as always with the only minor difference being that we correct the start of the x scale to 0,0 for aesthetic purposes. 
+
+
+*Make a plot that shows the top 25 wine consuming countries*
+
+```{r wine_plot}
+
+top25_wine <- drinks %>% 
+  arrange(desc(wine_servings)) %>% 
+  slice(1:25)
+
+ggplot(top25_wine, aes(x=wine_servings, y=reorder(country,wine_servings))) + 
+  geom_col(fill="#DD0000", width=0.7) + 
+  labs(x="Wine Servings (litres per year)", y="Country") + 
+  ggtitle("Top 25 Wine Consuming Countries", "Litres of Wine Consumed per Year by each Country") + 
+  theme(panel.background = element_rect(colour = "White")) + 
+  theme_light() +
+  scale_x_continuous(expand = c(0,0)) 
+
+```
+
+Similar to the beer servings data set and plot we proceed to conduct our analysis with the top 25 wine producing countries. 
+
+*Finally, make a plot that shows the top 25 spirit consuming countries*
+
+```{r spirit_plot}
+
+top25_spirit <- drinks %>% 
+  arrange(desc(spirit_servings)) %>% 
+  slice(1:25) 
+
+ggplot(top25_spirit, aes(x=spirit_servings, y=reorder(country,spirit_servings))) + 
+  geom_col(fill="#DD0000", width=0.7) + 
+  labs(x="Spirit Servings (litres per year)", y="Country") + 
+  ggtitle("Top 25 Spirit Consuming Countries", "Litres of Spirit Consumed per Year by each Country") + 
+  theme(panel.background = element_rect(colour = "White")) + 
+  theme_light() +
+  scale_x_continuous(expand = c(0,0)) 
+
+```
+Finally, we do the same for spirits as we did in our two previuos analyses.
+
+*What can you infer from these plots? Don't just explain what's in the graph, but speculate or tell a short story (1-2 paragraphs max).*
+
+> TYPE YOUR ANSWER AFTER (AND OUTSIDE!) THIS BLOCKQUOTE.
+
+Overall, there seems to be a significant difference between the top 25 beer, wine and spirit consuming countries. When considering the consumption of spirits and beer there seems to be little correlation to income per capita. One might assume that the consumption of these alcoholic beverages is positively enforced by the production of the beverage in each country, but this is not certain. Furthermore, we find that wine consumption is higher in wine producing countries (e.g. Portugal, France, etc.), but also that there seems to be a positive correlation between income per capita and the consumption of wine. It is possible to assume that wine, being more expensive than beer and spirits on a per liter (alcoholic) basis will be consumed more by countries that are economically better off than others. 
+At last, when looking at beer and spirits as well as wine, there also seems to be a clear cultural or even geographic factor. There must be cultural reasons for why more Eastern European countries are more prevalent in the top 25 spirit consumption list, whereas that is not the case for beer. Likewise, the top consuming groups we see for wine and beer are different as well. This could mean that the consumption of any alcoholic beverage is not only affected by the economic well being of a country, nor the production of a respective beverage in each country, but also the cultural heritage and the importance particular types of beverages carry within different societies and countries. 
+
