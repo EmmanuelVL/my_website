@@ -83,7 +83,6 @@ disqusShortname = ""
     # the 'static/img' folder.
     title = "Emmanuel & Data Analytics"
     subtitle = "A deep dive into my work"
-    image = "me.jpg"
     buttonText = "Let's go"
 
 

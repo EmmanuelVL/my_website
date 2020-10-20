@@ -7,7 +7,7 @@ description: Analysis of top rated movies and directors
 draft: false
 image: spielberg.jpg
 keywords: ""
-slug: blog7
+slug: blog8
 title: Movie directors
 ---
 
