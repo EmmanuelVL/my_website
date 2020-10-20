@@ -68,7 +68,7 @@ disqusShortname = ""
 
     # Button Style 1
     [[params.navigation.button1]]
-      name = "Get musical"
+      name = "Dive into blogs"
       url = "blogs"
 
     # Button Style 2
@@ -81,9 +81,9 @@ disqusShortname = ""
   [params.banner]
     # To change the background image on the homepage banner, replace 'banner.jpg' in
     # the 'static/img' folder.
-    title = "The wonders of Classical Music"
-    subtitle = "A deep dive in the best composers"
-    buttonText = "Get musical"
+    title = "Emmanuel & Data Analytics"
+    subtitle = "A deep dive into my work"
+    buttonText = "Let's go"
 
 
   # Tiles Section
@@ -92,10 +92,10 @@ disqusShortname = ""
     # Display your showcases here.
     
     [[params.tiles.showcase]]
-      title = "Beethoven"
-      subtitle = "The deaf genious"
-      image = "Beethoven"
-      url = "blogs/Beethoven"
+      title = "Alcohol consumption"
+      subtitle = "Top beer and wine consuming countries"
+      image = "beerandwine"
+      url = "blogs/blog6"
 
     [[params.tiles.showcase]]
       title = "AirBnB"
