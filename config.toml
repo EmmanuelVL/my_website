@@ -110,8 +110,8 @@ disqusShortname = ""
       url = "blogs/blog7"
 
     [[params.tiles.showcase]]
-      title = "Movie Directors"
-      subtitle = "Study of movie directors"
+      title = "Gapminder"
+      subtitle = "Analysis of GDP, mortality rate, fertility rate and HIV prevelance accross different countries"
       image = "gapminder.jpg"
       url = "blogs/blog8"
 
