@@ -112,7 +112,7 @@ disqusShortname = ""
     [[params.tiles.showcase]]
       title = "Movie Directors"
       subtitle = "Study of movie directors"
-      image = "spielberg.jpg"
+      image = "gapminder.jpg"
       url = "blogs/blog8"
 
    
